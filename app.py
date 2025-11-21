@@ -2,19 +2,33 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load model and scaler
-kmeans = joblib.load("kmeans_model.pkl")
-scaler = joblib.load("scaler.pkl")
-
-# Cluster labels
+# NOTE: The cluster labels have been corrected to match the final analysis based on the centroids.
+# 0: Active Budgeters (Low Value, High Recency)
+# 1: Premium Seniors (Older, High Value Spenders)
+# 2: Omnichannel Active Buyers (Balanced High Spend)
+# 3: Dormant Low Spenders (Highest Churn Risk)
+# 4: Older Budgeters (Moderate Income, Low Engagement)
+# 5: Young Affluent Spenders (Highest Value, Youngest)
 cluster_labels = {
-    0: "Premium Seniors – Older (~70), wealthy, high spenders, prefer in-store",
-    1: "Browsing Budgeters – Middle-aged, low income, frequent browsers, minimal spend",
-    2: "Omnichannel Actives – Late middle-aged, mid-high income, frequent online & store buyers",
-    3: "Dormant Low Spenders – Middle-aged, low spenders, long time since last purchase",
-    4: "Loyal In-Store Buyers – Older, wealthy, heavy in-store shoppers, recent buyers",
-    5: "Young Big Spenders – Younger, very wealthy, highest spenders, prefer in-store",
+    0: "Active Budgeters: Low annual spend, but highly recent purchase (Low Churn)",
+    1: "Premium Seniors: Oldest group, very high income and high total spending (High Value)",
+    2: "Omnichannel High-Value: Mid-range age, high income, balanced high spend across Web and Store",
+    3: "Dormant Low Spenders: Lowest spending, highest recency (Highest Churn Risk)",
+    4: "Older Budgeters: Moderate income, low spending, low engagement",
+    5: "Young Affluent Spenders: Youngest group, highest total spending and highest value",
 }
+
+# Load model and scaler
+# NOTE: These files must be present in the same directory as this Streamlit app.
+try:
+    kmeans = joblib.load("kmeans_model.pkl")
+    scaler = joblib.load("scaler.pkl")
+except FileNotFoundError:
+    st.error(
+        "Model files 'kmeans_model.pkl' or 'scaler.pkl' not found. Please ensure they are uploaded."
+    )
+    st.stop()
+
 
 # Page setup
 st.set_page_config(
@@ -26,19 +40,20 @@ st.markdown(
     """
     <style>
         html, body, [class*="css"] {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: #FAFAFA;
         }
 
         .stButton > button {
             background-color: #28a745;
             color: white;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
-            padding: 16px 36px;
+            padding: 12px 24px;
             border-radius: 8px;
             border: none;
             transition: background-color 0.3s ease;
+            width: 100%; /* Make the button full width of its column */
         }
 
         .stButton > button:hover {
@@ -46,9 +61,18 @@ st.markdown(
         }
 
         .result-text {
-            font-size: 28px;
-            font-weight: 1000;
+            font-size: 24px;
+            font-weight: 700;
             margin-top: 25px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #e6f7ff;
+            border-left: 6px solid #1890ff;
+            color: #000 !important;
+
+        }
+        .stNumberInput {
+            margin-bottom: 0px; /* Adjust spacing for better form layout */
         }
     </style>
     """,
@@ -59,42 +83,41 @@ st.markdown(
 st.markdown("## 👥 Customer Segmentation Predictor")
 
 st.write(
-    "Enter customer details below to predict their segment using K-Means clustering."
+    "Enter customer details below to predict their segment using the trained K-Means model."
 )
 
 # Input fields
 col1, col2 = st.columns(2)
 
 with col1:
-    age = st.number_input("Age", min_value=18, max_value=100, value=35)
-    income = st.number_input("Income", min_value=0, max_value=200000, value=50000)
+    age = st.number_input("Age (Years)", min_value=18, max_value=100, value=45)
+    income = st.number_input(
+        "Income (Annual, USD)", min_value=0, max_value=200000, value=75000, step=1000
+    )
     total_spending = st.number_input(
-        "Total Spending", min_value=0, max_value=5000, value=1000
+        "Total Spending (USD, Last 2 Years)", min_value=0, max_value=5000, value=1200
     )
 
-    # Recency + Predict button in same row
-    col_recency, col_predict = st.columns([2, 1.5])
-    with col_recency:
-        recency = st.number_input(
-            "Recency (days since last purchase)", min_value=0, max_value=365, value=30
-        )
-    with col_predict:
-        st.markdown("<br>", unsafe_allow_html=True)
-        predict_clicked = st.button("Predict")
+    # Recency input
+    recency = st.number_input(
+        "Recency (Days since last purchase)", min_value=0, max_value=365, value=45
+    )
+
 
 with col2:
     num_web_purchases = st.number_input(
-        "Number of Web Purchases", min_value=0, max_value=100, value=10
+        "Number of Web Purchases", min_value=0, max_value=100, value=5
     )
     num_store_purchases = st.number_input(
-        "Number of Store Purchases", min_value=0, max_value=100, value=10
+        "Number of Store Purchases", min_value=0, max_value=100, value=7
     )
     num_web_visits = st.number_input(
-        "Number of Web Visits/Month", min_value=0, max_value=50, value=3
+        "Number of Web Visits/Month", min_value=0, max_value=50, value=6
     )
 
-# Prediction
-if predict_clicked:
+# Prediction button
+st.markdown("---")
+if st.button("Predict Customer Segment", key="predict_button"):
     input_data = pd.DataFrame(
         {
             "Age": [age],
@@ -107,11 +130,18 @@ if predict_clicked:
         }
     )
 
+    # Scaling and Prediction
     input_scaled = scaler.transform(input_data)
     cluster = kmeans.predict(input_scaled)[0]
     label = cluster_labels.get(cluster, "Unknown Segment")
 
+    # Display Result
     st.markdown(
         f"<div class='result-text'><strong>Predicted Segment (Cluster {cluster}):</strong> {label}</div>",
         unsafe_allow_html=True,
     )
+
+st.markdown("---")
+st.caption(
+    "Note: This app requires 'kmeans_model.pkl' and 'scaler.pkl' files in the same directory to run."
+)

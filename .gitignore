@@ -1,0 +1,13 @@
+# Create the .gitignore file
+New-Item -Path .gitignore -ItemType File
+
+# Add content to the file using PowerShell (or paste it manually)
+@'
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.ipynb
+*.csv
+.DS_Store
+'@ | Out-File .gitignore -Encoding UTF8
