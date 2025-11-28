@@ -7,7 +7,15 @@ This project deploys a machine learning model designed to perform real-time cust
 The final, fully containerized application is deployed live on Render:
 
 [Live Demo Link (Render):] https://smart-seg-model.onrender.com/
+## 🖼️ Demo (UI Screenshot)
 
+
+
+Below is a preview screenshot of the application UI:
+
+
+
+![Demo Screenshot](smart_segment_webapp_demo.png)
 🎯 Key Features
 
 Real-time Inference: Accepts 8 customer input features (Age, Income, Spending, etc.) and returns the predicted segment immediately.
